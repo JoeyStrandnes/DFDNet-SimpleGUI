@@ -3,6 +3,7 @@
 [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
 [void] [System.Windows.Forms.Application]::EnableVisualStyles();
 
+
 #Creating basic form
 $Form = New-Object System.Windows.Forms.Form
 $Form.Text = "DFDNet GUI"
@@ -213,6 +214,10 @@ $Button_StartDFDNet.Add_Click({
 
 
     #Start DFDNet
+    #conda activate DFDNet
+
+    #powershell.exe -ExecutionPolicy ByPass -NoExit -Command "& 'D:\Programming_Enviroments\Anaconda\shell\condabin\conda-hook.ps1' ; conda activate 'D:\Programming_Enviroments\Anaconda' "
+
 
 })
 
@@ -233,6 +238,26 @@ $Form.add_Shown({
         Write-Output $global:OutputImagePath | Out-File $SettingsFile -Append
         Write-Output $global:UpScaleFactor | Out-File $SettingsFile -Append
         Write-Output $global:GPUID | Out-File $SettingsFile -Append
+
+    }
+    else{ #Load all settings from file
+        $global:InputImagePath =  Get-Content $global:SettingsFile | Select-Object -Index 0
+        $global:OutputImagePath =  Get-Content $global:SettingsFile | Select-Object -Index 1
+        $global:UpScaleFactor = Get-Content $global:SettingsFile | Select-Object -Index 2
+        $global:GPUID = Get-Content $global:SettingsFile | Select-Object -Index 3
+
+        $TextBox_InputDir.Text = $global:InputImagePath
+        $TextBox_OutputDir.Text = $global:OutputImagePath
+        $TextBox_ScaleFactor.Text = $global:UpScaleFactor
+
+        if($global:GPUID -eq -1){
+            $CheckBox_CPU.Checked = $true
+        }
+        else{
+            $CheckBox_CPU.Checked = $false
+            $TextBox_ScaleFactor.Text = $global:GPUID
+        }
+
 
     }
 
