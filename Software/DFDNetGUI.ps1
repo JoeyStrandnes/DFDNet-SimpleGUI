@@ -12,8 +12,6 @@ $Form.Height = 400
 $Form.FormBorderStyle = 'FixedDialog'
 $Form.MaximizeBox = $false
 
-
-
 #Add textbox for input directory
 $TextBox_InputDir = New-Object System.Windows.Forms.TextBox
 $TextBox_InputDir.Location = New-Object System.Drawing.Point(20,20)  ### Location of the text box
@@ -105,6 +103,51 @@ $InfoBox_ScaleFactor.BackColor = "Transparent"
 $Form.Controls.Add($InfoBox_ScaleFactor)
 
 
+#Info box -Progressbar 0
+$InfoBox_Progressbar0 = New-Object System.Windows.Forms.Label
+$InfoBox_Progressbar0.Text = "Input"
+$InfoBox_Progressbar0.Location = New-Object System.Drawing.Size(10,228)
+#$InfoBox_Progressbar0.width = 50
+$InfoBox_Progressbar0.AutoSize = $true
+$InfoBox_Progressbar0.BackColor = "Transparent"
+$Form.Controls.Add($InfoBox_Progressbar0)
+
+
+#Info box -Progressbar 1
+$InfoBox_Progressbar1 = New-Object System.Windows.Forms.Label
+$InfoBox_Progressbar1.Text = "Affine Param"
+$InfoBox_Progressbar1.Location = New-Object System.Drawing.Size(10,253)
+#$InfoBox_Progressbar1.width = 70
+$InfoBox_Progressbar1.AutoSize = $true
+$InfoBox_Progressbar1.BackColor = "Transparent"
+$Form.Controls.Add($InfoBox_Progressbar1)
+
+#Info box -Progressbar 2
+$InfoBox_Progressbar2 = New-Object System.Windows.Forms.Label
+$InfoBox_Progressbar2.Text = "Landmarks"
+$InfoBox_Progressbar2.Location = New-Object System.Drawing.Size(10,278)
+#$InfoBox_Progressbar2.width = 50
+$InfoBox_Progressbar2.AutoSize = $true
+$InfoBox_Progressbar2.BackColor = "Transparent"
+$Form.Controls.Add($InfoBox_Progressbar2)
+
+#Info box -Progressbar 3
+$InfoBox_Progressbar3 = New-Object System.Windows.Forms.Label
+$InfoBox_Progressbar3.Text = "Restore Face"
+$InfoBox_Progressbar3.Location = New-Object System.Drawing.Size(10,303)
+#$InfoBox_Progressbar3.width = 50
+$InfoBox_Progressbar3.AutoSize = $true
+$InfoBox_Progressbar3.BackColor = "Transparent"
+$Form.Controls.Add($InfoBox_Progressbar3)
+
+#Info box -Progressbar 3
+$InfoBox_Progressbar4 = New-Object System.Windows.Forms.Label
+$InfoBox_Progressbar4.Text = "Final"
+$InfoBox_Progressbar4.Location = New-Object System.Drawing.Size(10,328)
+#$InfoBox_Progressbar4.width = 50
+$InfoBox_Progressbar4.AutoSize = $true
+$InfoBox_Progressbar4.BackColor = "Transparent"
+$Form.Controls.Add($InfoBox_Progressbar4)
 
 
 ####################################################################################
@@ -129,7 +172,8 @@ $Form.Controls.Add($Button_OutputFiles)
 $Button_StartDFDNet = New-Object System.Windows.Forms.Button
 $Button_StartDFDNet.Text = "Start DFDNet"
 $Button_StartDFDNet.Enabled = $true
-$Button_StartDFDNet.Location = New-Object System.Drawing.Point(100,200)
+$Button_StartDFDNet.Location = New-Object System.Drawing.Point(20,165)
+$Button_StartDFDNet.Size = new-object System.Drawing.Size(350,50)
 $Form.Controls.Add($Button_StartDFDNet)
 
 
@@ -142,18 +186,60 @@ $CheckBox_CPU.Enabled = $true
 $CheckBox_CPU.Checked = $true
 $Form.Controls.Add($CheckBox_CPU)  
 
+####################################################################################
+#                                   MISC                                           #
+####################################################################################
+
 
 #File explorer
 Add-Type -AssemblyName System.Windows.Forms
 $FileBrowser = New-Object System.Windows.Forms.FolderBrowserDialog
 $FileBrowser.FileName
 
+#Timer for checking DFDNet status
+$Timer = New-Object system.windows.forms.timer
+$Timer.Interval = 500 #500ms
+$Timer.Enabled = $false
+
+#Progress bar for DFDNet step 0
+$ProgressBar_Step0 = New-Object System.Windows.Forms.ProgressBar
+$ProgressBar_Step0.Location = New-Object System.Drawing.Point(85, 225)
+$ProgressBar_Step0.Size = New-Object System.Drawing.Size(285, 20)
+$ProgressBar_Step0.Minimum = 0
+$Form.Controls.Add($ProgressBar_Step0);
+
+#Progress bar for DFDNet step 1
+$ProgressBar_Step1 = New-Object System.Windows.Forms.ProgressBar
+$ProgressBar_Step1.Location = New-Object System.Drawing.Point(85, 250)
+$ProgressBar_Step1.Size = New-Object System.Drawing.Size(285, 20)
+$ProgressBar_Step1.Minimum = 0
+$Form.Controls.Add($ProgressBar_Step1);
+
+#Progress bar for DFDNet step 2
+$ProgressBar_Step2 = New-Object System.Windows.Forms.ProgressBar
+$ProgressBar_Step2.Location = New-Object System.Drawing.Point(85, 275)
+$ProgressBar_Step2.Size = New-Object System.Drawing.Size(285, 20)
+$ProgressBar_Step2.Minimum = 0
+$Form.Controls.Add($ProgressBar_Step2);
+
+#Progress bar for DFDNet step 3
+$ProgressBar_Step3 = New-Object System.Windows.Forms.ProgressBar
+$ProgressBar_Step3.Location = New-Object System.Drawing.Point(85, 300)
+$ProgressBar_Step3.Size = New-Object System.Drawing.Size(285, 20)
+$ProgressBar_Step3.Minimum = 0
+$Form.Controls.Add($ProgressBar_Step3);
+
+#Progress bar for DFDNet step 4
+$ProgressBar_Step4 = New-Object System.Windows.Forms.ProgressBar
+$ProgressBar_Step4.Location = New-Object System.Drawing.Point(85, 325)
+$ProgressBar_Step4.Size = New-Object System.Drawing.Size(285, 20)
+$ProgressBar_Step4.Minimum = 0
+$Form.Controls.Add($ProgressBar_Step4);
 
 
 ####################################################################################
 #                               GLOBAL VARIABLES                                   #
 ####################################################################################
-
 
 
 #Settings for DFDNet
@@ -164,6 +250,12 @@ $FileBrowser.FileName
 [string]$global:UpScaleFactor
 [string]$global:GPUID
 
+#DFDNet process
+$global:DFDNetProcess
+
+#For progressbar. Im sure there is a better way of doing this. I just dont know how.
+#Shoudl be able to pipe the created process output directly to this process.
+[int]$global:InputFileCount
 
 
 ####################################################################################
@@ -225,7 +317,6 @@ $Button_StartDFDNet.Add_Click({
     }
 
 
-
     if($TextBox_ScaleFactor.TextLength -ne 0){
         $global:UpScaleFactor = $TextBox_ScaleFactor.Text
     }
@@ -249,14 +340,29 @@ $Button_StartDFDNet.Add_Click({
 
 
     #Start DFDNet
-    #Get Anaconda path, no idea how to do this in a clean way....
+    #Get Anaconda path, no idea how to do this in a clean way...
     $AnacondaPath = (Get-Command anaconda).Path 
     $AnacondaPath = Split-Path $AnacondaPath -Parent
     $AnacondaPath = Split-Path $AnacondaPath -Parent
-    Write-Host $AnacondaPath
-    
 
-    Start-Process PowerShell -ArgumentList "-ExecutionPolicy ByPass -NoExit -Command ""& '$AnacondaPath\shell\condabin\conda-hook.ps1' ; conda activate $global:CondaEnviromentName"""
+    $TemporaryOutput = "$PSScriptRoot\DFDNetGUI\_TMPOutput"
+
+    $DFDNetOption = "python test_FaceDict.py --test_path $global:InputImagePath --results_dir $TemporaryOutput --upscale_factor $global:UpScaleFactor --gpu_ids $global:GPUID"
+
+    #Start-Process PowerShell -ArgumentList "-ExecutionPolicy ByPass -NoExit -Command ""& '$AnacondaPath\shell\condabin\conda-hook.ps1' ; conda activate $global:CondaEnviromentName; $DFDNetOption"""
+    $global:DFDNetProcess = Start-Process PowerShell -ArgumentList "-ExecutionPolicy ByPass -Command ""& '$AnacondaPath\shell\condabin\conda-hook.ps1' ; conda activate $global:CondaEnviromentName; $DFDNetOption""" -WindowStyle Minimized -PassThru
+
+    #Configure the progress bars
+    $global:InputFileCount = (Get-ChildItem -File $global:InputImagePath).Count
+    #Write-Host $global:InputFileCount
+
+    $ProgressBar_Step0.Maximum = $global:InputFileCount
+    $ProgressBar_Step1.Maximum = $global:InputFileCount
+    $ProgressBar_Step2.Maximum = $global:InputFileCount
+    $ProgressBar_Step3.Maximum = $global:InputFileCount
+    $ProgressBar_Step4.Maximum = $global:InputFileCount
+
+    $Timer.Start()
 
 
 })
@@ -305,8 +411,65 @@ $Form.add_Shown({
         $TextBox_ScaleFactor.Text = $global:GPUID
     }
 
+
+    #Create folders
+    if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step0_Input")){
+        New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step0_Input" -ItemType Directory
+    }
+    if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step1_CropImg")){
+        New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step1_CropImg" -ItemType Directory
+    }
+    if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step2_Landmarks")){
+        New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step2_Landmarks" -ItemType Directory
+    }
+    if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step3_RestoreCropFace")){
+        New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step3_RestoreCropFace" -ItemType Directory
+    }
+    if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults")){
+        New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults" -ItemType Directory
+    }
+    
 })
 
+$Timer.add_Tick({
+
+
+    try{
+        if($ProgressBar_Step0.Value -le $ProgressBar_Step0.Maximum){
+            $ProgressBar_Step0.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step0_Input").Count
+        }
+        if($ProgressBar_Step1.Value -le $ProgressBar_Step1.Maximum){
+            $ProgressBar_Step1.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step1_CropImg").Count
+        }
+        if($ProgressBar_Step2.Value -le $ProgressBar_Step2.Maximum){
+            $ProgressBar_Step2.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step2_Landmarks").Count
+        }
+        if($ProgressBar_Step3.Value -le $ProgressBar_Step3.Maximum){
+            $ProgressBar_Step3.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step3_RestoreCropFace").Count
+        }
+        if($ProgressBar_Step4.Value -le $ProgressBar_Step4.Maximum){
+            $ProgressBar_Step4.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults").Count
+        }
+
+    }
+    catch{
+        $ProgressBar_Step0.Value = 0
+        $ProgressBar_Step1.Value = 0
+        $ProgressBar_Step2.Value = 0
+        $ProgressBar_Step3.Value = 0
+        $ProgressBar_Step4.Value = 0
+    }
+
+    if($global:DFDNetProcess.HasExited){ #Then we are done
+        Copy-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults\*" -Destination $OutputImagePath -Recurse
+        Start-Sleep -Milliseconds 100
+        Remove-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput" -Recurse -Force
+        $Timer.Stop()
+    }
+
+    
+    Start-Sleep -Milliseconds 10 #It get angry and glicthes if run without a delay :(
+})
 
 
 $Form.ShowDialog()
