@@ -37,9 +37,21 @@ $TextBox_OutputDir.ScrollBars = "None"                                ### Allows
 $Form.Controls.Add($TextBox_OutputDir)
 
 
+#Add textbox for conda enviroment name
+$TextBox_CondaName = New-Object System.Windows.Forms.TextBox
+$TextBox_CondaName.Location = New-Object System.Drawing.Point(100,75)  ### Location of the text box
+$TextBox_CondaName.Size = New-Object System.Drawing.Size(50,20)       ### Size of the text box
+$TextBox_CondaName.Multiline = $false                                  ### Allows multiple lines of data
+$TextBox_CondaName.AcceptsReturn = $true                              ### By hitting enter it creates a new line
+$TextBox_CondaName.Enabled = $true
+$TextBox_CondaName.Text = ""
+$TextBox_CondaName.ScrollBars = "None"                                ### Allows for a vertical scroll bar if the list of text is too big for the window
+$Form.Controls.Add($TextBox_CondaName)
+
+
 #Add textbox for GPU selection
 $TextBox_GPU = New-Object System.Windows.Forms.TextBox
-$TextBox_GPU.Location = New-Object System.Drawing.Point(100,75)  ### Location of the text box
+$TextBox_GPU.Location = New-Object System.Drawing.Point(100,100)  ### Location of the text box
 $TextBox_GPU.Size = New-Object System.Drawing.Size(50,20)       ### Size of the text box
 $TextBox_GPU.Multiline = $true                                  ### Allows multiple lines of data
 $TextBox_GPU.AcceptsReturn = $true                              ### By hitting enter it creates a new line
@@ -50,9 +62,9 @@ $Form.Controls.Add($TextBox_GPU)
 
 #Add textbox for Scale factor
 $TextBox_ScaleFactor = New-Object System.Windows.Forms.TextBox
-$TextBox_ScaleFactor.Location = New-Object System.Drawing.Point(100,100)  ### Location of the text box
+$TextBox_ScaleFactor.Location = New-Object System.Drawing.Point(100,125)  ### Location of the text box
 $TextBox_ScaleFactor.Size = New-Object System.Drawing.Size(50,20)       ### Size of the text box
-$TextBox_ScaleFactor.Multiline = $true                                  ### Allows multiple lines of data
+$TextBox_ScaleFactor.Multiline = $false                                  ### Allows multiple lines of data
 $TextBox_ScaleFactor.AcceptsReturn = $true                              ### By hitting enter it creates a new line
 $TextBox_ScaleFactor.Enabled = $true
 $TextBox_ScaleFactor.Text = "2"
@@ -60,11 +72,21 @@ $TextBox_ScaleFactor.ScrollBars = "None"                                ### Allo
 $Form.Controls.Add($TextBox_ScaleFactor)
 
 
+#Info box
+$InfoBox_CondaName = New-Object System.Windows.Forms.Label
+$InfoBox_CondaName.Text = "Conda Name"
+$InfoBox_CondaName.Location = New-Object System.Drawing.Size(20,78)
+#$InfoBox.AutoSize = $false
+$InfoBox_CondaName.width = 150
+#$InfoBox.TextAlign = "MiddleCenter"
+$InfoBox_CondaName.BackColor = "Transparent"
+$Form.Controls.Add($InfoBox_CondaName)
+
 
 #Info box
 $InfoBox_GPU = New-Object System.Windows.Forms.Label
 $InfoBox_GPU.Text = "GPU Index"
-$InfoBox_GPU.Location = New-Object System.Drawing.Size(20,78)
+$InfoBox_GPU.Location = New-Object System.Drawing.Size(20,102)
 #$InfoBox.AutoSize = $false
 $InfoBox_GPU.width = 150
 #$InfoBox.TextAlign = "MiddleCenter"
@@ -75,12 +97,15 @@ $Form.Controls.Add($InfoBox_GPU)
 #Info box
 $InfoBox_ScaleFactor = New-Object System.Windows.Forms.Label
 $InfoBox_ScaleFactor.Text = "Upscale Factor"
-$InfoBox_ScaleFactor.Location = New-Object System.Drawing.Size(20,102)
+$InfoBox_ScaleFactor.Location = New-Object System.Drawing.Size(20,126)
 #$InfoBox.AutoSize = $false
 $InfoBox_ScaleFactor.width = 150
 #$InfoBox.TextAlign = "MiddleCenter"
 $InfoBox_ScaleFactor.BackColor = "Transparent"
 $Form.Controls.Add($InfoBox_ScaleFactor)
+
+
+
 
 ####################################################################################
 #                                   BUTTONS                                        #
@@ -110,7 +135,7 @@ $Form.Controls.Add($Button_StartDFDNet)
 
 #Add checkbox for CPU selection
 $CheckBox_CPU = new-object System.Windows.Forms.checkbox
-$CheckBox_CPU.Location = new-object System.Drawing.Size(175,75)
+$CheckBox_CPU.Location = new-object System.Drawing.Size(175,100)
 $CheckBox_CPU.Size = new-object System.Drawing.Size(100,20)
 $CheckBox_CPU.Text = "CPU"
 $CheckBox_CPU.Enabled = $true
@@ -135,6 +160,7 @@ $FileBrowser.FileName
 [string]$global:SettingsFile = "$PSScriptRoot\DFDNetGUI\DFDNetSettings.txt"
 [string]$global:InputImagePath
 [string]$global:OutputImagePath
+[string]$global:CondaEnviromentName
 [string]$global:UpScaleFactor
 [string]$global:GPUID
 
@@ -191,6 +217,14 @@ $Button_StartDFDNet.Add_Click({
         $global:OutputImagePath = "$PSScriptRoot\DFDNetGUI\OutputImages"
     }
     
+    if($TextBox_CondaName.TextLength -ne 0){
+        $global:CondaEnviromentName = $TextBox_CondaName.Text
+    }
+    else{
+        $global:CondaEnviromentName = "base"
+    }
+
+
 
     if($TextBox_ScaleFactor.TextLength -ne 0){
         $global:UpScaleFactor = $TextBox_ScaleFactor.Text
@@ -209,20 +243,26 @@ $Button_StartDFDNet.Add_Click({
     #write settings to file
     Write-Output $global:InputImagePath | Out-File $SettingsFile -Force
     Write-Output $global:OutputImagePath | Out-File $SettingsFile -Append
+    Write-Output $global:CondaEnviromentName | Out-File $SettingsFile -Append
     Write-Output $global:UpScaleFactor | Out-File $SettingsFile -Append
     Write-Output $global:GPUID | Out-File $SettingsFile -Append
 
 
     #Start DFDNet
-    #conda activate DFDNet
+    #Get Anaconda path, no idea how to do this in a clean way....
+    $AnacondaPath = (Get-Command anaconda).Path 
+    $AnacondaPath = Split-Path $AnacondaPath -Parent
+    $AnacondaPath = Split-Path $AnacondaPath -Parent
+    Write-Host $AnacondaPath
+    
 
-    #powershell.exe -ExecutionPolicy ByPass -NoExit -Command "& 'D:\Programming_Enviroments\Anaconda\shell\condabin\conda-hook.ps1' ; conda activate 'D:\Programming_Enviroments\Anaconda' "
+    Start-Process PowerShell -ArgumentList "-ExecutionPolicy ByPass -NoExit -Command ""& '$AnacondaPath\shell\condabin\conda-hook.ps1' ; conda activate $global:CondaEnviromentName"""
 
 
 })
 
 
-#Form load
+#Form load. Handles the saved settings
 $Form.add_Shown({
     
     If(!(test-path $SettingsFile)){ #Check if settings file is created
@@ -231,11 +271,13 @@ $Form.add_Shown({
 
         $global:InputImagePath =  "$PSScriptRoot\DFDNetGUI\InputImages"
         $global:OutputImagePath = "$PSScriptRoot\DFDNetGUI\OutputImages"
+        $global:CondaEnviromentName = "base"
         $global:UpScaleFactor = 2
         $global:GPUID = -1 #CPU
 
         Write-Output $global:InputImagePath | Out-File $SettingsFile -Force
         Write-Output $global:OutputImagePath | Out-File $SettingsFile -Append
+        Write-Output $global:CondaEnviromentName | Out-File $SettingsFile -Append
         Write-Output $global:UpScaleFactor | Out-File $SettingsFile -Append
         Write-Output $global:GPUID | Out-File $SettingsFile -Append
 
@@ -243,26 +285,25 @@ $Form.add_Shown({
     else{ #Load all settings from file
         $global:InputImagePath =  Get-Content $global:SettingsFile | Select-Object -Index 0
         $global:OutputImagePath =  Get-Content $global:SettingsFile | Select-Object -Index 1
-        $global:UpScaleFactor = Get-Content $global:SettingsFile | Select-Object -Index 2
-        $global:GPUID = Get-Content $global:SettingsFile | Select-Object -Index 3
-
-        $TextBox_InputDir.Text = $global:InputImagePath
-        $TextBox_OutputDir.Text = $global:OutputImagePath
-        $TextBox_ScaleFactor.Text = $global:UpScaleFactor
-
-        if($global:GPUID -eq -1){
-            $CheckBox_CPU.Checked = $true
-        }
-        else{
-            $CheckBox_CPU.Checked = $false
-            $TextBox_ScaleFactor.Text = $global:GPUID
-        }
-
+        $global:CondaEnviromentName = Get-Content $global:SettingsFile | Select-Object -Index 2
+        $global:UpScaleFactor = Get-Content $global:SettingsFile | Select-Object -Index 3
+        $global:GPUID = Get-Content $global:SettingsFile | Select-Object -Index 4
 
     }
 
-    #powershell -WindowStyle hidden -Command "& {[System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms'); [System.Windows.Forms.MessageBox]::Show('Automatic logoff after 1 hour of inactivity','WARNING')}"  
+    #Fill settings boxes
+    $TextBox_InputDir.Text = $global:InputImagePath
+    $TextBox_OutputDir.Text = $global:OutputImagePath
+    $TextBox_ScaleFactor.Text = $global:UpScaleFactor
+    $TextBox_CondaName.Text = $global:CondaEnviromentName
 
+    if($global:GPUID -eq -1){
+        $CheckBox_CPU.Checked = $true
+    }
+    else{
+        $CheckBox_CPU.Checked = $false
+        $TextBox_ScaleFactor.Text = $global:GPUID
+    }
 
 })
 
