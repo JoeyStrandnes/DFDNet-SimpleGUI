@@ -6,7 +6,7 @@
 
 #Creating basic form
 $Form = New-Object System.Windows.Forms.Form
-$Form.Text = "DFDNet GUI v1.0"
+$Form.Text = "DFDNet GUI v1.1"
 $Form.Width = 400
 $Form.Height = 400
 $Form.FormBorderStyle = 'FixedDialog'
@@ -68,6 +68,19 @@ $TextBox_ScaleFactor.Enabled = $true
 $TextBox_ScaleFactor.Text = "2"
 $TextBox_ScaleFactor.ScrollBars = "None"                                ### Allows for a vertical scroll bar if the list of text is too big for the window
 $Form.Controls.Add($TextBox_ScaleFactor)
+
+
+#Add textbox for batch processing images
+$TextBox_Batch = New-Object System.Windows.Forms.TextBox
+$TextBox_Batch.Location = New-Object System.Drawing.Point(250,100)  ### Location of the text box
+$TextBox_Batch.Size = New-Object System.Drawing.Size(50,20)       ### Size of the text box
+$TextBox_Batch.Multiline = $false                                  ### Allows multiple lines of data
+$TextBox_Batch.AcceptsReturn = $true                              ### By hitting enter it creates a new line
+$TextBox_Batch.Enabled = $false
+$TextBox_Batch.Text = "1"
+$TextBox_Batch.ScrollBars = "None"                                ### Allows for a vertical scroll bar if the list of text is too big for the window
+$Form.Controls.Add($TextBox_Batch)
+
 
 
 #Info box
@@ -186,6 +199,18 @@ $CheckBox_CPU.Enabled = $true
 $CheckBox_CPU.Checked = $true
 $Form.Controls.Add($CheckBox_CPU)  
 
+
+#Add checkbox for batch processing of images
+$CheckBox_Batch = new-object System.Windows.Forms.checkbox
+$CheckBox_Batch.Location = new-object System.Drawing.Size(250,75)
+#$CheckBox_Batch.Size = new-object System.Drawing.Size(100,40)
+$CheckBox_Batch.AutoSize = $true
+$CheckBox_Batch.Text = "Batch process images"
+$CheckBox_Batch.Enabled = $true
+$CheckBox_Batch.Checked = $false
+$Form.Controls.Add($CheckBox_Batch)  
+
+
 ####################################################################################
 #                                   MISC                                           #
 ####################################################################################
@@ -249,14 +274,22 @@ $Form.Controls.Add($ProgressBar_Step4);
 [string]$global:CondaEnviromentName
 [string]$global:UpScaleFactor
 [string]$global:GPUID
+[string]$global:BatchSizeSetting
 
 #DFDNet process
 $global:DFDNetProcess
+$global:BatchSize
+$global:BatchCounter = 0
+$global:AnacondaPath
 
 #For progressbar. Im sure there is a better way of doing this. I just dont know how.
 #Shoudl be able to pipe the created process output directly to this process.
 [int]$global:InputFileCount
-
+$global:ProgressBar0
+$global:ProgressBar1
+$global:ProgressBar2
+$global:ProgressBar3
+$global:ProgressBar4
 
 ####################################################################################
 #                                    EVENTS                                        #
@@ -292,8 +325,20 @@ $CheckBox_CPU.Add_CheckStateCHanged({
 })
 
 
+$CheckBox_Batch.Add_CheckStateCHanged({
+
+    if($CheckBox_Batch.Checked -eq $true){
+        $TextBox_Batch.Enabled = $true
+    }
+    else{
+        $TextBox_Batch.Enabled = $false
+    }
+
+})
+
 $Button_StartDFDNet.Add_Click({
 
+    $global:BatchCounter = 0
 
     #Disable user input
     $TextBox_InputDir.Enabled = $false
@@ -301,11 +346,13 @@ $Button_StartDFDNet.Add_Click({
     $TextBox_CondaName.Enabled = $false
     $TextBox_ScaleFactor.Enabled = $false
     $TextBox_GPU.Enabled = $false
+    $TextBox_Batch.Enabled = $false
 
     $Button_InputFiles.Enabled = $false
     $Button_OutputFiles.Enabled = $false
     $Button_StartDFDNet.Enabled = $false
     $CheckBox_CPU.Enabled = $false
+    $CheckBox_Batch.Enabled = $false
 
     #Fetch user settings
     if($TextBox_InputDir.TextLength -ne 0){
@@ -340,6 +387,13 @@ $Button_StartDFDNet.Add_Click({
         $global:GPUID = $TextBox_GPU.Text
     }
 
+    if($CheckBox_Batch.Checked -eq $true){
+        $global:BatchSizeSetting = $TextBox_Batch.Text
+    }
+    else{ #Get info from text box
+        $global:BatchSizeSetting = -1
+    }
+
 
     #write settings to file
     Write-Output $global:InputImagePath | Out-File $SettingsFile -Force
@@ -347,24 +401,40 @@ $Button_StartDFDNet.Add_Click({
     Write-Output $global:CondaEnviromentName | Out-File $SettingsFile -Append
     Write-Output $global:UpScaleFactor | Out-File $SettingsFile -Append
     Write-Output $global:GPUID | Out-File $SettingsFile -Append
+    Write-Output $global:BatchSizeSetting | Out-File $SettingsFile -Append
+
+    #Get number of files to convert
+    $global:InputFileCount = (Get-ChildItem -File $global:InputImagePath).Count
+
+    #Split input images into batches
+    if($CheckBox_Batch.Checked -eq $true){
+
+        $global:BatchSize = [math]::Ceiling($global:InputFileCount/$TextBox_Batch.Text) #Number of batch sizes
+
+        for($i = 0; $i -lt $global:BatchSize; $i++){
+            New-Item -ItemType Directory -Force -Path "$global:InputImagePath\_TMP-DFDNet-GUI\Batch$i" #Create folders
+            Get-Childitem -Path $global:InputImagePath -File | Select-Object -First $TextBox_Batch.Text | Move-Item -Destination "$InputImagePath\_TMP-DFDNet-GUI\Batch$i" -Force
+            
+        }
+
+    }
+
 
 
     #Start DFDNet
     #Get Anaconda path, no idea how to do this in a clean way...
-    $AnacondaPath = (Get-Command anaconda).Path 
-    $AnacondaPath = Split-Path $AnacondaPath -Parent
-    $AnacondaPath = Split-Path $AnacondaPath -Parent
+    $global:AnacondaPath = (Get-Command anaconda).Path 
+    $global:AnacondaPath = Split-Path $global:AnacondaPath -Parent
+    $global:AnacondaPath = Split-Path $global:AnacondaPath -Parent
 
     $TemporaryOutput = "$PSScriptRoot\DFDNetGUI\_TMPOutput"
 
-    $DFDNetOption = "python test_FaceDict.py --test_path $global:InputImagePath --results_dir $TemporaryOutput --upscale_factor $global:UpScaleFactor --gpu_ids $global:GPUID"
+    $DFDNetOption = "python test_FaceDict.py --test_path $global:InputImagePath\_TMP-DFDNet-GUI\Batch$global:BatchCounter --results_dir $TemporaryOutput --upscale_factor $global:UpScaleFactor --gpu_ids $global:GPUID"
 
     #$global:DFDNetProcess = Start-Process PowerShell -ArgumentList "-NoExit -ExecutionPolicy ByPass -Command ""& '$AnacondaPath\shell\condabin\conda-hook.ps1' ; conda activate $global:CondaEnviromentName; $DFDNetOption""" -WindowStyle Minimized -PassThru
     $global:DFDNetProcess = Start-Process PowerShell -ArgumentList "-ExecutionPolicy ByPass -Command ""& '$AnacondaPath\shell\condabin\conda-hook.ps1' ; conda activate $global:CondaEnviromentName; $DFDNetOption""" -WindowStyle Minimized -PassThru
 
     #Configure the progress bars
-    $global:InputFileCount = (Get-ChildItem -File $global:InputImagePath).Count
-
     $ProgressBar_Step0.Maximum = $global:InputFileCount
     $ProgressBar_Step1.Maximum = $global:InputFileCount
     $ProgressBar_Step2.Maximum = $global:InputFileCount
@@ -394,12 +464,14 @@ $Form.add_Shown({
         $global:CondaEnviromentName = "base"
         $global:UpScaleFactor = 2
         $global:GPUID = -1 #CPU
+        $global:BatchSizeSetting = 10
 
         Write-Output $global:InputImagePath | Out-File $SettingsFile -Force
         Write-Output $global:OutputImagePath | Out-File $SettingsFile -Append
         Write-Output $global:CondaEnviromentName | Out-File $SettingsFile -Append
         Write-Output $global:UpScaleFactor | Out-File $SettingsFile -Append
         Write-Output $global:GPUID | Out-File $SettingsFile -Append
+        Write-Output $global:BatchSizeSetting | Out-File $SettingsFile -Append
 
     }
     else{ #Load all settings from file
@@ -408,6 +480,7 @@ $Form.add_Shown({
         $global:CondaEnviromentName = Get-Content $global:SettingsFile | Select-Object -Index 2
         $global:UpScaleFactor = Get-Content $global:SettingsFile | Select-Object -Index 3
         $global:GPUID = Get-Content $global:SettingsFile | Select-Object -Index 4
+        $global:BatchSizeSetting = Get-Content $global:SettingsFile | Select-Object -Index 5
 
     }
 
@@ -423,6 +496,14 @@ $Form.add_Shown({
     else{
         $CheckBox_CPU.Checked = $false
         $TextBox_ScaleFactor.Text = $global:GPUID
+    }
+
+    if($global:BatchSizeSetting -eq -1){ #Not checked
+        $CheckBox_Batch.Checked = $false
+    }
+    else {
+        $CheckBox_Batch.Checked = $true
+        $TextBox_Batch.Text = $global:BatchSizeSetting
     }
 
 
@@ -447,22 +528,22 @@ $Form.add_Shown({
 
 $Timer.add_Tick({
 
-    if(!$global:DFDNetProcess.HasExited){
+    if(!$global:DFDNetProcess.HasExited){ #If DFDNet is running
         try{
             if($ProgressBar_Step0.Value -le $ProgressBar_Step0.Maximum){
-                $ProgressBar_Step0.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step0_Input").Count
+                $ProgressBar_Step0.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step0_Input").Count + $global:ProgressBar0
             }
             if($ProgressBar_Step1.Value -le $ProgressBar_Step1.Maximum){
-                $ProgressBar_Step1.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step1_CropImg").Count
+                $ProgressBar_Step1.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step1_CropImg").Count + $global:ProgressBar1
             }
             if($ProgressBar_Step2.Value -le $ProgressBar_Step2.Maximum){
-                $ProgressBar_Step2.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step2_Landmarks").Count
+                $ProgressBar_Step2.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step2_Landmarks").Count + $global:ProgressBar2
             }
             if($ProgressBar_Step3.Value -le $ProgressBar_Step3.Maximum){
-                $ProgressBar_Step3.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step3_RestoreCropFace").Count
+                $ProgressBar_Step3.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step3_RestoreCropFace").Count + $global:ProgressBar3
             }
             if($ProgressBar_Step4.Value -le $ProgressBar_Step4.Maximum){
-                $ProgressBar_Step4.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults").Count
+                $ProgressBar_Step4.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults").Count + $global:ProgressBar4
             }
         }
         catch{
@@ -473,9 +554,45 @@ $Timer.add_Tick({
             $ProgressBar_Step4.Value = 0
         }
     }
-    else{
-        #if($global:DFDNetProcess.HasExited){ #Then we are done
-            #Enable all settings again
+    else{ #If DFDNet is done
+
+        $global:ProgressBar0 = $ProgressBar_Step0.Value
+        $global:ProgressBar1 = $ProgressBar_Step1.Value
+        $global:ProgressBar2 = $ProgressBar_Step2.Value
+        $global:ProgressBar3 = $ProgressBar_Step3.Value
+        $global:ProgressBar4 = $ProgressBar_Step4.Value
+
+        if($CheckBox_Batch.Checked -eq $true -AND $global:BatchCounter -lt $global:BatchSize){ #Batch processing is enabled and still has batches left
+
+            $global:BatchCounter++
+
+            Copy-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults\*" -Destination $OutputImagePath -Recurse
+            Remove-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput" -Recurse -Force
+            
+            #Recreate folders
+            if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step0_Input")){
+                New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step0_Input" -ItemType Directory
+            }
+            if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step1_CropImg")){
+                New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step1_CropImg" -ItemType Directory
+            }
+            if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step2_Landmarks")){
+                New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step2_Landmarks" -ItemType Directory
+            }
+            if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step3_RestoreCropFace")){
+                New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step3_RestoreCropFace" -ItemType Directory
+            }
+            if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults")){
+                New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults" -ItemType Directory
+            }
+            #Restart DFDNet
+            $TemporaryOutput = "$PSScriptRoot\DFDNetGUI\_TMPOutput"
+            $DFDNetOption = "python test_FaceDict.py --test_path $global:InputImagePath\_TMP-DFDNet-GUI\Batch$global:BatchCounter --results_dir $TemporaryOutput --upscale_factor $global:UpScaleFactor --gpu_ids $global:GPUID"
+            $global:DFDNetProcess = Start-Process PowerShell -ArgumentList "-ExecutionPolicy ByPass -Command ""& '$global:AnacondaPath\shell\condabin\conda-hook.ps1' ; conda activate $global:CondaEnviromentName; $DFDNetOption""" -WindowStyle Minimized -PassThru
+            Start-Sleep -Milliseconds 100
+
+        }
+        else{ #Done
             $TextBox_InputDir.Enabled = $true
             $TextBox_OutputDir.Enabled = $true
             $TextBox_CondaName.Enabled = $true
@@ -486,22 +603,30 @@ $Timer.add_Tick({
             $Button_OutputFiles.Enabled = $true
             $Button_StartDFDNet.Enabled = $true
             $CheckBox_CPU.Enabled = $true
+            $CheckBox_Batch.Enabled = $true
     
-            if($ProgressBar_Step4.Value -ne $ProgressBar_Step4.Maximum){ #Error, program terminated before finishing
+            if($CheckBox_Batch.Checked -eq $true){
+                Get-ChildItem -Path "$global:InputImagePath\_TMP-DFDNet-GUI\*" -Include *.jpg, *.png  -Recurse | Move-Item -Destination $global:InputImagePath -Force #Restore input images
+                Remove-Item -Path "$global:InputImagePath\_TMP-DFDNet-GUI" -Recurse -Force
+            }
+            
+
+            if((Get-ChildItem -File "$global:OutputImagePath").Count -ne $global:InputFileCount){ #Error, program terminated before finishing
                 $Timer.Stop()
-                [System.Windows.Forms.MessageBox]::Show('Program finished unsuccessfully','WARNING')
-                #[System.Windows.MessageBox]::Show('Program finished unsuccessfully','Error','Error')
+                [System.Windows.Forms.MessageBox]::Show('Program finished unsuccessfully','Error')
             }
             else{
                 $Timer.Stop()
                 [System.Windows.Forms.MessageBox]::Show('Successfully enhanced all images')
                 Copy-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults\*" -Destination $OutputImagePath -Recurse
-                Start-Sleep -Milliseconds 100
-                Remove-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput" -Recurse -Force
+                
+                #Start-Sleep -Milliseconds 100
+
             }
-    
-            #$Timer.Stop()
-       #}
+        
+            Remove-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput" -Recurse -Force
+        }
+
     }
     
 
