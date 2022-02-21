@@ -6,7 +6,7 @@
 
 #Creating basic form
 $Form = New-Object System.Windows.Forms.Form
-$Form.Text = "DFDNet GUI"
+$Form.Text = "DFDNet GUI v1.0"
 $Form.Width = 400
 $Form.Height = 400
 $Form.FormBorderStyle = 'FixedDialog'
@@ -295,6 +295,18 @@ $CheckBox_CPU.Add_CheckStateCHanged({
 $Button_StartDFDNet.Add_Click({
 
 
+    #Disable user input
+    $TextBox_InputDir.Enabled = $false
+    $TextBox_OutputDir.Enabled = $false
+    $TextBox_CondaName.Enabled = $false
+    $TextBox_ScaleFactor.Enabled = $false
+    $TextBox_GPU.Enabled = $false
+
+    $Button_InputFiles.Enabled = $false
+    $Button_OutputFiles.Enabled = $false
+    $Button_StartDFDNet.Enabled = $false
+    $CheckBox_CPU.Enabled = $false
+
     #Fetch user settings
     if($TextBox_InputDir.TextLength -ne 0){
         $global:InputImagePath =  $TextBox_InputDir.Text
@@ -316,7 +328,6 @@ $Button_StartDFDNet.Add_Click({
         $global:CondaEnviromentName = "base"
     }
 
-
     if($TextBox_ScaleFactor.TextLength -ne 0){
         $global:UpScaleFactor = $TextBox_ScaleFactor.Text
     }
@@ -329,7 +340,6 @@ $Button_StartDFDNet.Add_Click({
         $global:GPUID = $TextBox_GPU.Text
     }
 
-    
 
     #write settings to file
     Write-Output $global:InputImagePath | Out-File $SettingsFile -Force
@@ -349,12 +359,11 @@ $Button_StartDFDNet.Add_Click({
 
     $DFDNetOption = "python test_FaceDict.py --test_path $global:InputImagePath --results_dir $TemporaryOutput --upscale_factor $global:UpScaleFactor --gpu_ids $global:GPUID"
 
-    #Start-Process PowerShell -ArgumentList "-ExecutionPolicy ByPass -NoExit -Command ""& '$AnacondaPath\shell\condabin\conda-hook.ps1' ; conda activate $global:CondaEnviromentName; $DFDNetOption"""
+    #$global:DFDNetProcess = Start-Process PowerShell -ArgumentList "-NoExit -ExecutionPolicy ByPass -Command ""& '$AnacondaPath\shell\condabin\conda-hook.ps1' ; conda activate $global:CondaEnviromentName; $DFDNetOption""" -WindowStyle Minimized -PassThru
     $global:DFDNetProcess = Start-Process PowerShell -ArgumentList "-ExecutionPolicy ByPass -Command ""& '$AnacondaPath\shell\condabin\conda-hook.ps1' ; conda activate $global:CondaEnviromentName; $DFDNetOption""" -WindowStyle Minimized -PassThru
 
     #Configure the progress bars
     $global:InputFileCount = (Get-ChildItem -File $global:InputImagePath).Count
-    #Write-Host $global:InputFileCount
 
     $ProgressBar_Step0.Maximum = $global:InputFileCount
     $ProgressBar_Step1.Maximum = $global:InputFileCount
@@ -362,8 +371,13 @@ $Button_StartDFDNet.Add_Click({
     $ProgressBar_Step3.Maximum = $global:InputFileCount
     $ProgressBar_Step4.Maximum = $global:InputFileCount
 
-    $Timer.Start()
+    $ProgressBar_Step0.Value = 0
+    $ProgressBar_Step1.Value = 0
+    $ProgressBar_Step2.Value = 0
+    $ProgressBar_Step3.Value = 0
+    $ProgressBar_Step4.Value = 0
 
+    $Timer.Start()
 
 })
 
@@ -433,41 +447,64 @@ $Form.add_Shown({
 
 $Timer.add_Tick({
 
-
-    try{
-        if($ProgressBar_Step0.Value -le $ProgressBar_Step0.Maximum){
-            $ProgressBar_Step0.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step0_Input").Count
+    if(!$global:DFDNetProcess.HasExited){
+        try{
+            if($ProgressBar_Step0.Value -le $ProgressBar_Step0.Maximum){
+                $ProgressBar_Step0.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step0_Input").Count
+            }
+            if($ProgressBar_Step1.Value -le $ProgressBar_Step1.Maximum){
+                $ProgressBar_Step1.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step1_CropImg").Count
+            }
+            if($ProgressBar_Step2.Value -le $ProgressBar_Step2.Maximum){
+                $ProgressBar_Step2.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step2_Landmarks").Count
+            }
+            if($ProgressBar_Step3.Value -le $ProgressBar_Step3.Maximum){
+                $ProgressBar_Step3.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step3_RestoreCropFace").Count
+            }
+            if($ProgressBar_Step4.Value -le $ProgressBar_Step4.Maximum){
+                $ProgressBar_Step4.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults").Count
+            }
         }
-        if($ProgressBar_Step1.Value -le $ProgressBar_Step1.Maximum){
-            $ProgressBar_Step1.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step1_CropImg").Count
+        catch{
+            $ProgressBar_Step0.Value = 0
+            $ProgressBar_Step1.Value = 0
+            $ProgressBar_Step2.Value = 0
+            $ProgressBar_Step3.Value = 0
+            $ProgressBar_Step4.Value = 0
         }
-        if($ProgressBar_Step2.Value -le $ProgressBar_Step2.Maximum){
-            $ProgressBar_Step2.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step2_Landmarks").Count
-        }
-        if($ProgressBar_Step3.Value -le $ProgressBar_Step3.Maximum){
-            $ProgressBar_Step3.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step3_RestoreCropFace").Count
-        }
-        if($ProgressBar_Step4.Value -le $ProgressBar_Step4.Maximum){
-            $ProgressBar_Step4.Value = (Get-ChildItem -File "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults").Count
-        }
-
     }
-    catch{
-        $ProgressBar_Step0.Value = 0
-        $ProgressBar_Step1.Value = 0
-        $ProgressBar_Step2.Value = 0
-        $ProgressBar_Step3.Value = 0
-        $ProgressBar_Step4.Value = 0
-    }
-
-    if($global:DFDNetProcess.HasExited){ #Then we are done
-        Copy-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults\*" -Destination $OutputImagePath -Recurse
-        Start-Sleep -Milliseconds 100
-        Remove-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput" -Recurse -Force
-        $Timer.Stop()
-    }
-
+    else{
+        #if($global:DFDNetProcess.HasExited){ #Then we are done
+            #Enable all settings again
+            $TextBox_InputDir.Enabled = $true
+            $TextBox_OutputDir.Enabled = $true
+            $TextBox_CondaName.Enabled = $true
+            $TextBox_ScaleFactor.Enabled = $true
+            $TextBox_GPU.Enabled = $true
+        
+            $Button_InputFiles.Enabled = $true
+            $Button_OutputFiles.Enabled = $true
+            $Button_StartDFDNet.Enabled = $true
+            $CheckBox_CPU.Enabled = $true
     
+            if($ProgressBar_Step4.Value -ne $ProgressBar_Step4.Maximum){ #Error, program terminated before finishing
+                $Timer.Stop()
+                [System.Windows.Forms.MessageBox]::Show('Program finished unsuccessfully','WARNING')
+                #[System.Windows.MessageBox]::Show('Program finished unsuccessfully','Error','Error')
+            }
+            else{
+                $Timer.Stop()
+                [System.Windows.Forms.MessageBox]::Show('Successfully enhanced all images')
+                Copy-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults\*" -Destination $OutputImagePath -Recurse
+                Start-Sleep -Milliseconds 100
+                Remove-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput" -Recurse -Force
+            }
+    
+            #$Timer.Stop()
+       #}
+    }
+    
+
     Start-Sleep -Milliseconds 10 #It get angry and glicthes if run without a delay :(
 })
 
