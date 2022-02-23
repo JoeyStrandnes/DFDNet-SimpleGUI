@@ -21,10 +21,6 @@ Simply place [DFDNetGUI.ps1](https://github.com/JoeyStrandnes/DFDNet-SimpleGUI/b
 
 ###### List of features or bugs that need to be solved.
 
-### Fix issue when finished batch processing.
-
-The files are done, input files are restored and output files are moved to the final location. Sometimes thinks its not done and will throw an error.
-
 
 
 ### Add batch processing in parallel tasks.
