@@ -35,13 +35,13 @@ SOFTWARE.
 
 #Creating basic form
 $Form = New-Object System.Windows.Forms.Form
-$Form.Text = "DFDNet GUI v1.1"
+$Form.Text = "DFDNet GUI v1.2"
 $Form.Width = 400
 $Form.Height = 400
 $Form.FormBorderStyle = 'FixedDialog'
 $Form.MaximizeBox = $false
 
-#Add textbox for input directory
+#Add text box for input directory
 $TextBox_InputDir = New-Object System.Windows.Forms.TextBox
 $TextBox_InputDir.Location = New-Object System.Drawing.Point(20,20)  ### Location of the text box
 $TextBox_InputDir.Size = New-Object System.Drawing.Size(250,20)      ### Size of the text box
@@ -52,7 +52,7 @@ $TextBox_InputDir.Text = ""
 $TextBox_InputDir.ScrollBars = "None"                                ### Allows for a vertical scroll bar if the list of text is too big for the window
 $Form.Controls.Add($TextBox_InputDir)
 
-#Add textbox for output directory
+#Add text box for output directory
 $TextBox_OutputDir = New-Object System.Windows.Forms.TextBox
 $TextBox_OutputDir.Location = New-Object System.Drawing.Point(20,50)  ### Location of the text box
 $TextBox_OutputDir.Size = New-Object System.Drawing.Size(250,20)      ### Size of the text box
@@ -64,7 +64,7 @@ $TextBox_OutputDir.ScrollBars = "None"                                ### Allows
 $Form.Controls.Add($TextBox_OutputDir)
 
 
-#Add textbox for conda enviroment name
+#Add text box for conda environment name
 $TextBox_CondaName = New-Object System.Windows.Forms.TextBox
 $TextBox_CondaName.Location = New-Object System.Drawing.Point(100,75)  ### Location of the text box
 $TextBox_CondaName.Size = New-Object System.Drawing.Size(50,20)       ### Size of the text box
@@ -76,7 +76,7 @@ $TextBox_CondaName.ScrollBars = "None"                                ### Allows
 $Form.Controls.Add($TextBox_CondaName)
 
 
-#Add textbox for GPU selection
+#Add text box for GPU selection
 $TextBox_GPU = New-Object System.Windows.Forms.TextBox
 $TextBox_GPU.Location = New-Object System.Drawing.Point(100,100)  ### Location of the text box
 $TextBox_GPU.Size = New-Object System.Drawing.Size(50,20)       ### Size of the text box
@@ -87,7 +87,7 @@ $TextBox_GPU.Text = "0"
 $TextBox_GPU.ScrollBars = "None"                                ### Allows for a vertical scroll bar if the list of text is too big for the window
 $Form.Controls.Add($TextBox_GPU)
 
-#Add textbox for Scale factor
+#Add text box for Scale factor
 $TextBox_ScaleFactor = New-Object System.Windows.Forms.TextBox
 $TextBox_ScaleFactor.Location = New-Object System.Drawing.Point(100,125)  ### Location of the text box
 $TextBox_ScaleFactor.Size = New-Object System.Drawing.Size(50,20)       ### Size of the text box
@@ -99,7 +99,7 @@ $TextBox_ScaleFactor.ScrollBars = "None"                                ### Allo
 $Form.Controls.Add($TextBox_ScaleFactor)
 
 
-#Add textbox for batch processing images
+#Add text box for batch processing images
 $TextBox_Batch = New-Object System.Windows.Forms.TextBox
 $TextBox_Batch.Location = New-Object System.Drawing.Point(250,100)  ### Location of the text box
 $TextBox_Batch.Size = New-Object System.Drawing.Size(50,20)       ### Size of the text box
@@ -145,7 +145,7 @@ $InfoBox_ScaleFactor.BackColor = "Transparent"
 $Form.Controls.Add($InfoBox_ScaleFactor)
 
 
-#Info box -Progressbar 0
+#Info box -Progress bar 0
 $InfoBox_Progressbar0 = New-Object System.Windows.Forms.Label
 $InfoBox_Progressbar0.Text = "Input"
 $InfoBox_Progressbar0.Location = New-Object System.Drawing.Size(10,228)
@@ -311,8 +311,8 @@ $global:BatchSize
 $global:BatchCounter = 0
 $global:AnacondaPath
 
-#For progressbar. Im sure there is a better way of doing this. I just dont know how.
-#Shoudl be able to pipe the created process output directly to this process.
+#For progress bar. Im sure there is a better way of doing this. I just don't know how.
+#Should be able to pipe the created process output directly to this process.
 [int]$global:InputFileCount
 $global:ProgressBar0
 $global:ProgressBar1
@@ -442,7 +442,7 @@ $Button_StartDFDNet.Add_Click({
 
         for($i = 0; $i -lt $global:BatchSize; $i++){
             New-Item -ItemType Directory -Force -Path "$global:InputImagePath\_TMP-DFDNet-GUI\Batch$i" #Create folders
-            Get-Childitem -Path $global:InputImagePath -File | Select-Object -First $TextBox_Batch.Text | Move-Item -Destination "$InputImagePath\_TMP-DFDNet-GUI\Batch$i" -Force
+            Get-ChildItem -Path $global:InputImagePath -File | Select-Object -First $TextBox_Batch.Text | Move-Item -Destination "$InputImagePath\_TMP-DFDNet-GUI\Batch$i" -Force
             
         }
 
@@ -458,9 +458,31 @@ $Button_StartDFDNet.Add_Click({
 
     $TemporaryOutput = "$PSScriptRoot\DFDNetGUI\_TMPOutput"
 
-    $DFDNetOption = "python test_FaceDict.py --test_path $global:InputImagePath\_TMP-DFDNet-GUI\Batch$global:BatchCounter --results_dir $TemporaryOutput --upscale_factor $global:UpScaleFactor --gpu_ids $global:GPUID"
+    if($CheckBox_Batch.Checked -eq $true){
+        $DFDNetOption = "python test_FaceDict.py --test_path $global:InputImagePath\_TMP-DFDNet-GUI\Batch$global:BatchCounter --results_dir $TemporaryOutput --upscale_factor $global:UpScaleFactor --gpu_ids $global:GPUID"
+    }
+    else{
+        $DFDNetOption = "python test_FaceDict.py --test_path $global:InputImagePath --results_dir $TemporaryOutput --upscale_factor $global:UpScaleFactor --gpu_ids $global:GPUID"
+    }
 
-    #$global:DFDNetProcess = Start-Process PowerShell -ArgumentList "-NoExit -ExecutionPolicy ByPass -Command ""& '$AnacondaPath\shell\condabin\conda-hook.ps1' ; conda activate $global:CondaEnviromentName; $DFDNetOption""" -WindowStyle Minimized -PassThru
+    #Create temp folders
+    if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step0_Input")){
+        New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step0_Input" -ItemType Directory
+    }
+    if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step1_CropImg")){
+        New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step1_CropImg" -ItemType Directory
+    }
+    if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step2_Landmarks")){
+        New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step2_Landmarks" -ItemType Directory
+    }
+    if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step3_RestoreCropFace")){
+        New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step3_RestoreCropFace" -ItemType Directory
+    }
+    if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults")){
+        New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults" -ItemType Directory
+    }
+
+
     $global:DFDNetProcess = Start-Process PowerShell -ArgumentList "-ExecutionPolicy ByPass -Command ""& '$AnacondaPath\shell\condabin\conda-hook.ps1' ; conda activate $global:CondaEnviromentName; $DFDNetOption""" -WindowStyle Minimized -PassThru
 
     #Configure the progress bars
@@ -469,6 +491,12 @@ $Button_StartDFDNet.Add_Click({
     $ProgressBar_Step2.Maximum = $global:InputFileCount
     $ProgressBar_Step3.Maximum = $global:InputFileCount
     $ProgressBar_Step4.Maximum = $global:InputFileCount
+
+    $global:ProgressBar0 = 0
+    $global:ProgressBar1 = 0
+    $global:ProgressBar2 = 0
+    $global:ProgressBar3 = 0
+    $global:ProgressBar4 = 0
 
     $ProgressBar_Step0.Value = 0
     $ProgressBar_Step1.Value = 0
@@ -535,24 +563,6 @@ $Form.add_Shown({
         $TextBox_Batch.Text = $global:BatchSizeSetting
     }
 
-
-    #Create folders
-    if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step0_Input")){
-        New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step0_Input" -ItemType Directory
-    }
-    if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step1_CropImg")){
-        New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step1_CropImg" -ItemType Directory
-    }
-    if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step2_Landmarks")){
-        New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step2_Landmarks" -ItemType Directory
-    }
-    if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step3_RestoreCropFace")){
-        New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step3_RestoreCropFace" -ItemType Directory
-    }
-    if(!(Test-Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults")){
-        New-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults" -ItemType Directory
-    }
-    
 })
 
 $Timer.add_Tick({
@@ -622,6 +632,8 @@ $Timer.add_Tick({
 
         }
         else{ #Done
+
+            #Reenable GUI settings
             $TextBox_InputDir.Enabled = $true
             $TextBox_OutputDir.Enabled = $true
             $TextBox_CondaName.Enabled = $true
@@ -633,33 +645,47 @@ $Timer.add_Tick({
             $Button_StartDFDNet.Enabled = $true
             $CheckBox_CPU.Enabled = $true
             $CheckBox_Batch.Enabled = $true
-    
+
             if($CheckBox_Batch.Checked -eq $true){
-                Get-ChildItem -Path "$global:InputImagePath\_TMP-DFDNet-GUI\*" -Include *.jpg, *.png  -Recurse | Move-Item -Destination $global:InputImagePath -Force #Restore input images
+                $TextBox_Batch.Enabled = $true
+            }
+
+            if($CheckBox_CPU.Checked -eq $true){
+                $TextBox_GPU.Enabled = $false
+            }
+
+    
+            # Move the final batch of images from the temp folder to the output folder.
+            Copy-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults\*" -Destination $OutputImagePath -Recurse
+
+            #Restore input images
+            if($CheckBox_Batch.Checked -eq $true){
+                Get-ChildItem -Path "$global:InputImagePath\_TMP-DFDNet-GUI\*" -Include *.jpg, *.png  -Recurse | Move-Item -Destination $global:InputImagePath -Force 
                 Remove-Item -Path "$global:InputImagePath\_TMP-DFDNet-GUI" -Recurse -Force
             }
             
+            Start-Sleep -Milliseconds 100
 
-            if((Get-ChildItem -File "$global:OutputImagePath").Count -ne $global:InputFileCount){ #Error, program terminated before finishing
+            #Determine if successful or unsuccessful
+            if((Get-ChildItem -File "$global:OutputImagePath").Count -ne $global:InputFileCount){ # Completed images = input images?
                 $Timer.Stop()
-                [System.Windows.Forms.MessageBox]::Show('Program finished unsuccessfully','Error')
+                [System.Windows.Forms.MessageBox]::Show('Program finished unsuccessfully','Error') #Error, program terminated before finishing
             }
             else{
                 $Timer.Stop()
                 [System.Windows.Forms.MessageBox]::Show('Successfully enhanced all images')
-                Copy-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults\*" -Destination $OutputImagePath -Recurse
-                
+                #Copy-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput\Step4_FinalResults\*" -Destination $OutputImagePath -Recurse
                 #Start-Sleep -Milliseconds 100
 
             }
-        
+            #Remove temporary output folder
             Remove-Item -Path "$PSScriptRoot\DFDNetGUI\_TMPOutput" -Recurse -Force
         }
 
     }
     
 
-    Start-Sleep -Milliseconds 10 #It get angry and glicthes if run without a delay :(
+    Start-Sleep -Milliseconds 10 #It gets angry and glitches if run without a delay :(
 })
 
 
